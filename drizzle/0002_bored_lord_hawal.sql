@@ -1,0 +1,1 @@
+ALTER TABLE "games" RENAME TO "onlinefix";

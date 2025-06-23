@@ -1,0 +1,5 @@
+export { getFreetpByTitle } from './api/freeTpOrgApi.js'
+export { getOnlineFixByTitle } from './api/onlineFixApi.js'
+export { getGameOnline } from './api/gameOnlineApi.js'
+export { getGGSelGames } from './api/ggselApi.js'
+export { getPlatiMarketGames } from './api/platiApi.js'

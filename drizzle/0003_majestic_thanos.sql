@@ -1,0 +1,1 @@
+ALTER TABLE "onlinefix" RENAME COLUMN "name" TO "title";
