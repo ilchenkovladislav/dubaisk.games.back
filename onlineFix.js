@@ -1,10 +1,10 @@
 import 'dotenv/config'
-import { db } from './src/db/index.js'
 import { onlinefixTable } from './src/db/schema.js'
 import { fetchPage, parsePage, delay } from './src/utils/parseUtils.js'
+import { getExistingGames, saveGamesToDatabase } from './src/utils/dbUtils.js'
 
 const NETWORK_SUFFIX = ' по сети'
-const MAX_PAGES = 74
+const MAX_PAGES = 5
 const BASE_URL = 'https://online-fix.me'
 const REQUEST_DELAY = 1000
 const EXCLUDED_GAMES = ['DayZ (DayZavr)']
@@ -71,21 +71,8 @@ function processGames(pageGames, existingGames) {
   return { newGames, shouldStop }
 }
 
-async function saveGamesToDatabase(games) {
-  if (games.length === 0) {
-    return
-  }
-
-  console.log(`Сохранение ${games.length} новых игр:`, games)
-  await db.insert(onlinefixTable).values(games)
-}
-
-async function getExistingGames() {
-  return await db.select().from(onlinefixTable)
-}
-
 export async function parseOnlineFixGames() {
-  const existingGames = await getExistingGames()
+  const existingGames = await getExistingGames(onlinefixTable)
   const allNewGames = []
   let shouldStop = false
 
@@ -106,7 +93,7 @@ export async function parseOnlineFixGames() {
     }
   }
 
-  await saveGamesToDatabase(allNewGames)
+  await saveGamesToDatabase(onlinefixTable, allNewGames)
 
   return {
     totalFound: allNewGames.length,
