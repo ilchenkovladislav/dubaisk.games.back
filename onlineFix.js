@@ -1,69 +1,125 @@
 import 'dotenv/config'
-import axios from 'axios'
-import * as cheerio from 'cheerio'
-import iconv from 'iconv-lite'
 import { db } from './src/db/index.js'
 import { onlinefixTable } from './src/db/schema.js'
+import { fetchPage, parsePage, delay } from './src/utils/parseUtils.js'
 
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
+const NETWORK_SUFFIX = ' по сети'
+const MAX_PAGES = 74
+const BASE_URL = 'https://online-fix.me'
+const REQUEST_DELAY = 1000
+const EXCLUDED_GAMES = ['DayZ (DayZavr)']
+
+const SELECTORS = {
+  articles: '.news .article',
+  link: '.big-link',
+  title: '.title',
 }
 
-function extractName(title) {
-  const networkPart = ' по сети'
+const REQUEST_OPTIONS = {
+  responseType: 'arraybuffer',
+}
 
-  const name = title.trim()
-  if (name.endsWith(networkPart)) {
-    return name.slice(0, name.length - networkPart.length)
+const isGameExcluded = (gameTitle) => EXCLUDED_GAMES.includes(gameTitle)
+
+const isGameInDatabase = (gameTitle, existingGames) =>
+  existingGames.some((dbGame) => dbGame.title === gameTitle)
+
+function extractCleanGameName(title) {
+  const cleanTitle = title.trim()
+
+  if (cleanTitle.endsWith(NETWORK_SUFFIX)) {
+    return cleanTitle.slice(0, -NETWORK_SUFFIX.length)
   }
 
-  return name
+  return cleanTitle
+}
+
+function extractGameInfo(element) {
+  const link = element.find(SELECTORS.link).attr('href') ?? ''
+  const rawTitle = element.find(SELECTORS.title).text()
+
+  return {
+    link,
+    title: extractCleanGameName(rawTitle),
+  }
+}
+
+async function parseSinglePage(pageNumber) {
+  const url = `${BASE_URL}/page/${pageNumber}`
+  const { data } = await fetchPage(url, REQUEST_OPTIONS)
+
+  return parsePage(data, SELECTORS.articles, extractGameInfo, 'win1251')
+}
+
+function processGames(pageGames, existingGames) {
+  const newGames = []
+  let shouldStop = false
+
+  for (const game of pageGames) {
+    if (isGameExcluded(game.title)) {
+      continue
+    }
+
+    if (isGameInDatabase(game.title, existingGames)) {
+      shouldStop = true
+      break
+    }
+
+    newGames.push(game)
+  }
+
+  return { newGames, shouldStop }
+}
+
+async function saveGamesToDatabase(games) {
+  if (games.length === 0) {
+    return
+  }
+
+  console.log(`Сохранение ${games.length} новых игр:`, games)
+  await db.insert(onlinefixTable).values(games)
+}
+
+async function getExistingGames() {
+  return await db.select().from(onlinefixTable)
 }
 
 export async function parseOnlineFixGames() {
-  const games = []
-  const maxPages = 74
-  const dbGames = await db.select().from(onlinefixTable)
-  let flag = false
+  const existingGames = await getExistingGames()
+  const allNewGames = []
+  let shouldStop = false
 
-  for (let index = 1; index <= maxPages; index++) {
-    if (flag) break
+  for (let currentPage = 1; currentPage <= MAX_PAGES && !shouldStop; currentPage++) {
+    try {
+      const pageGames = await parseSinglePage(currentPage)
+      const { newGames, shouldStop: stopFlag } = processGames(pageGames, existingGames)
 
-    const { data } = await axios.get(`https://online-fix.me/page/${index}`, {
-      responseType: 'arraybuffer',
-    })
+      allNewGames.push(...newGames)
+      shouldStop = stopFlag
 
-    const $ = cheerio.load(iconv.decode(data, 'win1251'))
-
-    const pageGames = $('.news .article')
-      .toArray()
-      .map((el) => {
-        return {
-          link: $(el).find('.big-link').attr('href') ?? '',
-          title: extractName($(el).find('.title').text()),
-        }
-      })
-
-    for (const game of pageGames) {
-      if (game.title === 'DayZ (DayZavr)') continue
-
-      if (dbGames.some((dbGame) => dbGame.title === game.title)) {
-        flag = true
-        break
+      if (currentPage < MAX_PAGES) {
+        await delay(REQUEST_DELAY)
       }
-
-      games.push(game)
-    }
-
-    if (index < maxPages) {
-      await delay(1000)
+    } catch (error) {
+      console.error(`Ошибка при парсинге страницы ${currentPage}:`, error)
+      break
     }
   }
 
-  if (games.length) {
-    console.log(games)
-    await db.insert(onlinefixTable).values(games)
+  await saveGamesToDatabase(allNewGames)
+
+  return {
+    totalFound: allNewGames.length,
+    games: allNewGames,
   }
 }
 
 parseOnlineFixGames()
+  .then((result) => {
+    console.log(`Парсинг завершен. Найдено ${result.totalFound} новых игр.`)
+    process.exit(0)
+  })
+  .catch((error) => {
+    console.error('Ошибка при парсинге:', error)
+    process.exit(1)
+  })
