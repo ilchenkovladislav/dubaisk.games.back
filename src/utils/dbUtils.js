@@ -1,4 +1,4 @@
-import { db } from './src/db/index.js'
+import { db } from '../db/index.js'
 
 export async function getExistingGames(table) {
   return await db.select().from(table)
