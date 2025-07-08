@@ -1,52 +1,61 @@
 import 'dotenv/config'
-import axios from 'axios'
-import * as cheerio from 'cheerio'
-import iconv from 'iconv-lite'
-import { db } from './src/db/index.js'
 import { freetpTable } from './src/db/schema.js'
+import { fetchPage, parsePage, delay } from './src/utils/parseUtils.js'
 import { extractFreetpGameTitle, getDifferenceByTitle } from './src/utils/freeTpUtils.js'
+import { getExistingGames, saveGamesToDatabase } from './src/utils/dbUtils.js'
 
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
+const MAX_PAGES = 5
+const REQUEST_DELAY = 1000
+const REQUEST_OPTIONS = {
+  responseType: 'arraybuffer',
 }
 
-async function main() {
-  const startPage = 1
-  const maxPages = 5
-  const dbFreetpGames = await db.select().from(freetpTable)
+const SELECTORS = {
+  articles: '.base .header-h1 a',
+}
 
+async function parseSinglePage(pageNumber) {
+  const url = `https://freetp.org/po-seti/page/${pageNumber}/`
+  const { data } = await fetchPage(url, REQUEST_OPTIONS)
+
+  return parsePage(data, SELECTORS.articles, extractGameInfo, 'win1251')
+}
+
+function extractGameInfo(element) {
+  const link = element.attr('href') ?? ''
+  const rawTitle = element.text()
+
+  return {
+    link,
+    title: extractFreetpGameTitle(rawTitle),
+  }
+}
+
+async function parseFreetp() {
+  const existingGames = await getExistingGames(freetpTable)
   const games = []
 
-  for (let i = startPage; i <= maxPages; i++) {
-    const url = `https://freetp.org/po-seti/page/${i}/`
+  for (let currentPage = 1; currentPage <= MAX_PAGES; currentPage++) {
+    const pageGames = await parseSinglePage(currentPage)
+    games.push(...pageGames)
 
-    const { data } = await axios.get(url, {
-      responseType: 'arraybuffer',
-    })
-
-    const $ = cheerio.load(iconv.decode(data, 'win1251'))
-    const freetpGames = $('.base .header-h1 a')
-      .toArray()
-      .map((el) => {
-        return {
-          title: extractFreetpGameTitle($(el).text()),
-          link: $(el).attr('href'),
-        }
-      })
-      .filter((game) => game.title)
-
-    games.push(...freetpGames)
-
-    if (i < maxPages) {
-      await delay(1000)
+    if (currentPage < MAX_PAGES) {
+      await delay(REQUEST_DELAY)
     }
   }
 
-  const newGames = getDifferenceByTitle(games, dbFreetpGames)
-  if (newGames.length) {
-    console.log(newGames)
-    await db.insert(freetpTable).values(newGames)
-  }
+  const newGames = getDifferenceByTitle(games, existingGames)
+  await saveGamesToDatabase(freetpTable, newGames)
+
+  return { totalFound: newGames.length }
 }
 
-main()
+parseFreetp()
+  .then((result) => {
+    console.log(`Парсинг завершен. Найдено ${result.totalFound} новых игр.`)
+    process.exit(0)
+  })
+  .catch((error) => {
+    console.error('Ошибка при парсинге:', error)
+    process.exit(1)
+  })
