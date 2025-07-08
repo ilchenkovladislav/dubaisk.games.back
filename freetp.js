@@ -14,13 +14,6 @@ const SELECTORS = {
   articles: '.base .header-h1 a',
 }
 
-async function parseSinglePage(pageNumber) {
-  const url = `https://freetp.org/po-seti/page/${pageNumber}/`
-  const { data } = await fetchPage(url, REQUEST_OPTIONS)
-
-  return parsePage(data, SELECTORS.articles, extractGameInfo, 'win1251')
-}
-
 function extractGameInfo(element) {
   const link = element.attr('href') ?? ''
   const rawTitle = element.text()
@@ -29,6 +22,13 @@ function extractGameInfo(element) {
     link,
     title: extractFreetpGameTitle(rawTitle),
   }
+}
+
+async function parseSinglePage(pageNumber) {
+  const url = `https://freetp.org/po-seti/page/${pageNumber}/`
+  const { data } = await fetchPage(url, REQUEST_OPTIONS)
+
+  return parsePage(data, SELECTORS.articles, extractGameInfo, 'win1251')
 }
 
 async function parseFreetp() {
