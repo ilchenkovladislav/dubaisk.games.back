@@ -1,9 +1,9 @@
-import { fetchGGSelData } from '../services/ggselService.js'
+import { fetchStealthGGselData } from '../services/ggselService.js'
 import { parseGGSelData } from '../parsers/ggselParser.js'
 import { ok, err } from 'neverthrow'
 
 export async function getGGSelGames(query) {
-  const data = await fetchGGSelData(query)
+  const data = await fetchStealthGGselData(query)
 
   return data.match(
     (data) => ok(parseGGSelData(data)),
