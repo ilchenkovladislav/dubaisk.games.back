@@ -10,6 +10,7 @@ import {
 } from './src/index.js'
 import { NotFoundError, DatabaseError } from './src/errors/ApiErrors.js'
 import { SteamChartsParsingError } from './src/errors/SteamChartsError.js'
+import { getFreeTpVersionGame } from './src/api/freeTpOrgApi.js'
 
 const app = express()
 app.use(cors())
@@ -115,6 +116,42 @@ app.get('/api/freetp/:query', async (req, res) => {
       })
     },
   )
+})
+
+app.get('/api/game/:id/:query', async (req, res) => {
+  const { id, query } = req.params
+  const freetp = await getFreetpByTitle(query)
+  const onlinefix = await getOnlineFixByTitle(query)
+  const plati = await getPlatiMarketGames(query)
+  const online = await getGameOnline(id)
+  let versionGame = null
+
+  if (freetp.isOk()) {
+    versionGame = await getFreeTpVersionGame(freetp.value.link)
+  }
+
+  const results = {
+    freetp,
+    onlinefix,
+    plati,
+    online,
+    versionGame,
+  }
+
+  for (const key in results) {
+    if (Object.prototype.hasOwnProperty.call(results, key)) {
+      results[key].match(
+        (data) => {
+          results[key] = { success: true, data }
+        },
+        (error) => {
+          results[key] = { success: false, error: error.message }
+        },
+      )
+    }
+  }
+
+  res.json(results)
 })
 
 app.listen(port, () => {
