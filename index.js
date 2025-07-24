@@ -11,6 +11,7 @@ import {
 import { NotFoundError, DatabaseError } from './src/errors/ApiErrors.js'
 import { SteamChartsParsingError } from './src/errors/SteamChartsError.js'
 import { getFreeTpVersionGame } from './src/api/freeTpOrgApi.js'
+import { getOnlineFixGameVersion } from './src/api/onlineFixApi.js'
 
 const app = express()
 app.use(cors())
@@ -124,10 +125,15 @@ app.get('/api/game/:id/:query', async (req, res) => {
   const onlinefix = await getOnlineFixByTitle(query)
   const plati = await getPlatiMarketGames(query)
   const online = await getGameOnline(id)
-  let versionGame = null
+  let freetpVersionGame = null
+  let onlineFixVersionGame = null
 
   if (freetp.isOk()) {
-    versionGame = await getFreeTpVersionGame(freetp.value.link)
+    freetpVersionGame = await getFreeTpVersionGame(freetp.value.link)
+  }
+
+  if (onlinefix.isOk()) {
+    onlineFixVersionGame = await getOnlineFixGameVersion(onlinefix.value.link)
   }
 
   const results = {
@@ -135,7 +141,8 @@ app.get('/api/game/:id/:query', async (req, res) => {
     onlinefix,
     plati,
     online,
-    versionGame,
+    freetpVersionGame,
+    onlineFixVersionGame,
   }
 
   for (const key in results) {
