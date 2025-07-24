@@ -7,6 +7,5 @@ export function parseFreeTpVersionGame(htmlData) {
     "img[src = '//freetp.org/templates/freetp2/images/download.png'] + a",
   ).toArray()
 
-  console.log($(elements[0]).prop('textContent'))
   return extractVersion($(elements[0]).prop('textContent'))
 }
