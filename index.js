@@ -128,21 +128,21 @@ app.get('/api/game/:id/:query', async (req, res) => {
   let freetpVersionGame = null
   let onlineFixVersionGame = null
 
-  if (freetp.isOk()) {
-    freetpVersionGame = await getFreeTpVersionGame(freetp.value.link)
-  }
-
-  if (onlinefix.isOk()) {
-    onlineFixVersionGame = await getOnlineFixGameVersion(onlinefix.value.link)
-  }
-
-  const results = {
+  let results = {
     freetp,
     onlinefix,
     plati,
     online,
-    freetpVersionGame,
-    onlineFixVersionGame,
+  }
+
+  if (freetp.isOk()) {
+    freetpVersionGame = await getFreeTpVersionGame(freetp.value.link)
+    results = { ...results, freetpVersionGame }
+  }
+
+  if (onlinefix.isOk()) {
+    onlineFixVersionGame = await getOnlineFixGameVersion(onlinefix.value.link)
+    results = { ...results, onlineFixVersionGame }
   }
 
   for (const key in results) {
