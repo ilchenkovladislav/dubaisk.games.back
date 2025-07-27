@@ -8,11 +8,11 @@ export function transformGames(games) {
   })
 }
 
-export function getPlatiMarketGames(query) {
+export function getPlatiMarketGames(query, pagesize = 3) {
   const url = 'https://plati.io/api/search.ashx'
   const params = {
     query,
-    pagesize: 3,
+    pagesize,
     response: 'json',
   }
 
