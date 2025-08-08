@@ -12,6 +12,7 @@ import { NotFoundError, DatabaseError } from './src/errors/ApiErrors.js'
 import { SteamChartsParsingError } from './src/errors/SteamChartsError.js'
 import { getFreeTpVersionGame } from './src/api/freeTpOrgApi.js'
 import { getOnlineFixGameVersion } from './src/api/onlineFixApi.js'
+import { getCurrency } from './src/services/currency.js'
 
 const app = express()
 app.use(cors())
@@ -159,6 +160,10 @@ app.get('/api/game/:id/:query', async (req, res) => {
   }
 
   res.json(results)
+})
+
+app.get('/api/currency/', async (req, res) => {
+  res.json(await getCurrency())
 })
 
 app.listen(port, () => {
