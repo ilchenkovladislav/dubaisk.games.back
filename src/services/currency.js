@@ -1,19 +1,16 @@
 import axios from 'axios'
 
 export async function getCurrency() {
-  const resUSD = await axios.get(
+  const resKZT = await axios.get(
     'https://steam-rates.playwallet.bot/latest-rate/?currency_code=KZT&base_currency_code=USD',
   )
 
   const resRUB = await axios.get(
-    'https://steam-rates.playwallet.bot/latest-rate/?currency_code=USD&base_currency_code=RUB',
+    'https://steam-rates.playwallet.bot/latest-rate/?currency_code=RUB&base_currency_code=USD',
   )
 
-  //  1$ ≈ 545.831тг
-  const usdRate = await resUSD.data[0].exchange_rate
-
-  //  1р ≈ 0.01258$
+  const kztRate = await resKZT.data[0].exchange_rate
   const rubRate = await resRUB.data[0].exchange_rate
 
-  return usdRate / rubRate
+  return rubRate / kztRate
 }
