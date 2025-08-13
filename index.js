@@ -3,7 +3,7 @@ import cors from 'cors'
 import express from 'express'
 import {
   getPlatiMarketGames,
-  getGGSelGames,
+  // getGGSelGames,
   getOnlineFixByTitle,
   getFreetpByTitle,
   getGameOnline,
@@ -38,20 +38,20 @@ app.get('/api/online/:id', async (req, res) => {
   )
 })
 
-app.get('/api/ggsel/:query', ggsel)
+// app.get('/api/ggsel/:query', ggsel)
 
-async function ggsel(req, res) {
-  const query = req.params.query
-  const result = await getGGSelGames(query)
+// async function ggsel(req, res) {
+//   const query = req.params.query
+//   const result = await getGGSelGames(query)
 
-  result.match(
-    (data) => res.json({ success: true, data }),
-    (error) => {
-      console.error('Error in getGGSelGames:', error)
-      return res.status(500).json({ success: false, error: error.message })
-    },
-  )
-}
+//   result.match(
+//     (data) => res.json({ success: true, data }),
+//     (error) => {
+//       console.error('Error in getGGSelGames:', error)
+//       return res.status(500).json({ success: false, error: error.message })
+//     },
+//   )
+// }
 
 app.get('/api/plati/:query', async (req, res) => {
   const query = req.params.query

@@ -1,8 +1,8 @@
 import 'dotenv/config'
 import axios from 'axios'
 import { ResultAsync } from 'neverthrow'
-import puppeteer from 'puppeteer-extra'
-import StealthPlugin from 'puppeteer-extra-plugin-stealth'
+// import puppeteer from 'puppeteer-extra'
+// import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 
 const GGSEL_BASE_URL = 'https://ggsel.net/search'
 
